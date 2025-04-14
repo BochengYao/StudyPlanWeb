@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>每日任务</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: "Microsoft YaHei", sans-serif;
+      background-color: #f7f7f7;
+      color: #333;
+    }
+    .container {
+      display: flex;
+      min-height: 100vh;
+    }
+    /* 左侧侧边栏 */
+    .sidebar {
+      width: 200px;
+      background-color: #fff;
+      border-right: 1px solid #ddd;
+
+
+      padding-left: 20px;
+      padding: 20px;
+    }
+    .sidebar h2 {
+      font-size: 24px;
+      margin-bottom: 10px;
+    }
+    .subject-list {
+      list-style: none;
+    }
+    .subject-list li {
+      margin-bottom: 10px;
+    }
+    .subject-list li a {
+      text-decoration: none;
+      color: #333;
+      display: block;
+      padding: 8px;
+      border-radius: 4px;
+    }
+    .subject-list li a:hover {
+      background-color: #eee;
+    }
+    /* 激活科目的主题色 */
+    .active-subject {
+      color: #fff !important;
+      margin-right: -20px;
+      border-radius: 20px 0 0 20px;
+      padding-left: 20px;
+    }
+    /* 右侧内容区 */
+    .content {
+      flex: 1;
+      padding: 20px;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+    }
+    .content h1 {
+      margin-bottom: 20px;
+      font-size: 24px;
+    }
+    /* 任务区域容器 */
+    .tasks-container {
+      margin-bottom: 20px;
+    }
+    /* 添加任务表单 */
+    .add-task-form {
+      display: flex;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    /* 为不同输入框设置不同的 flex 比例 */
+    .add-task-form input.task-name {
+      flex: 3;
+      height: 36px;
+      padding: 0 8px;
+      font-size: 14px;
+      border: 1px solid #ccc;
+      border-radius: 10px;
+      margin-right: 10px;
+    }
+    .add-task-form input.estimated-time {
+      flex: 1;
+      height: 36px;
+      padding: 0 8px;
+      font-size: 14px;
+      border: 1px solid #ccc;
+      border-radius: 10px;
+      margin-right: 10px;
+    }
+    .add-task-form button {
+      height: 36px;
+      padding: 0 16px;
+      font-size: 14px;
+      cursor: pointer;
+      border: none;
+      border-radius: 10px;
+      position: relative;
+      overflow: hidden;
+      background: rgba(220,220,220,0.6);
+      transition: background 0.3s ease;
+    }
+    .add-task-form button:hover {
+      /* 鼠标移动时的反光效果由 JS 控制 */
+    }
+    .add-task-form button.leave {
+      background: rgba(220,220,220,0.6);
+    }
+    /* 预计用时样式 */
+    .estimated-time-display {
+      color: #999;
+      font-family: "等线", sans-serif;
+      text-align: right;
+      min-width: 50px;
+    }
+    /* 单个任务项 */
+    .task-item {
+      background-color: #fff;
+      border-radius: 10px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      display: flex;
+      align-items: center;
+      padding: 10px;
+      margin-bottom: 10px;
+    }
+    .task-item .circle {
+      display: inline-block;
+      width: 18px;
+      height: 18px;
+      border: 2px solid #333;
+      border-radius: 50%;
+      margin-right: 8px;
+    }
+    .empty-circle {
+      background-color: transparent;
+    }
+    .filled-circle {
+      background-color: #333;
+    }
+    .task-name {
+      flex: 1;
+      font-size: 14px;
+    }
+    .completed {
+      text-decoration: line-through;
+      color: #999;
+    }
+    .delete-button {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 16px;
+      color: #999;
+    }
+    .delete-button:hover {
+      color: #333;
+    }
+    .task-section h2 {
+      margin-bottom: 10px;
+      font-size: 18px;
+    }
+    /* 输入框聚焦去掉黄色框 */
+    input:focus, textarea:focus {
+      outline: none;
+      border: 1px solid #ccc;
+    }
+    /* 内嵌网页容器：左右边界与表单控件对齐，但这里加大了宽度 */
+    .iframe-container {
+      /* 将宽度从100%改为105%，并用负边距使其居中 */
+      width: 105%;
+      margin-left: -2.3%;
+      height: calc(100% - 40px);
+      border-radius: 10px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+      overflow: hidden;
+      position: relative;
+      transition:
+        transform 0.6s cubic-bezier(0.22, 0.61, 0.36, 1),
+        border-radius 0.6s cubic-bezier(0.22, 0.61, 0.36, 1);
+      margin-bottom: 20px;
+      transform: scale(0.95);
+    }
+    .iframe-container.fullscreen {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 100;
+      margin-bottom: 0;
+      margin-left: 0;
+      transform: scale(1);
+      border-radius: 0;
+    }
+    .iframe-container iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+    /* 全屏及新窗口按钮：统一为40×40px */
+    .fullscreen-button,
+    #newWindowButton {
+      position: absolute;
+      top: 10px;
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: none;
+      border-radius: 5px;
+      background: rgba(240,240,240,0.5);
+      backdrop-filter: blur(5px);
+      cursor: pointer;
+      opacity: 0;
+      transition: opacity 0.3s;
+      z-index: 10;
+    }
+    .iframe-container:hover .fullscreen-button {
+      opacity: 1;
+    }
+    .iframe-container:hover #newWindowButton {
+      opacity: 1;
+    }
+    .fullscreen-button {
+      right: 10px;
+    }
+    #newWindowButton {
+      right: 60px;
+    }
+    /* 下拉按钮 */
+    #dropdownButton {
+      right: 110px; /* 原新窗口按钮在60px，全屏在10px */
+    }
+
+    /* 下拉菜单 */
+    .dropdown-menu {
+      position: absolute;
+      top: 60px;
+      right: 110px;
+      background: rgba(240,240,240,0.5);
+      backdrop-filter: blur(5px);
+      border-radius: 5px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      padding: 8px 0;
+      display: block !important;
+      min-width: 120px;
+      z-index: 1000;
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(-10px);
+      transition:
+        opacity 0.3s ease,
+        visibility 0.3s ease,
+        transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      pointer-events: none;
+    }
+
+    .dropdown-menu.show {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(0);
+      pointer-events: auto;
+    }
+
+    .dropdown-item {
+      padding: 8px 16px;
+      color: #333;
+      cursor: pointer;
+      transition: background 0.2s;
+      font-size: 14px;
+      transition: opacity 0.2s;
+    }
+
+    .dropdown-item:hover {
+      background: rgba(220,220,220,0.3);
+    }
+  </style>
+</head>
+<body>
+  {# 定义各科目的主题色 #}
+  {% if subject == '数学' %}
+    {% set color = '#2675F6' %}
+  {% elif subject == '英语' %}
+    {% set color = '#EA3259' %}
+  {% elif subject == '408' %}
+    {% set color = '#FCD618' %}
+  {% elif subject == '政治' %}
+    {% set color = '#25A75A' %}
+  {% else %}
+    {% set color = 'black' %}
+  {% endif %}
+
+  <div class="container">
+    <!-- 左侧侧边栏 -->
+    <div class="sidebar">
+      <h2>科目</h2>
+      <ul class="subject-list">
+        <li>
+          <a href="{{ url_for('show_subject', subject='数学') }}"
+             class="{% if subject == '数学' %}active-subject{% endif %}"
+             style="{% if subject == '数学' %}background-color: #2675F6;{% endif %}">
+             数学</a>
+        </li>
+        <li>
+          <a href="{{ url_for('show_subject', subject='英语') }}"
+             class="{% if subject == '英语' %}active-subject{% endif %}"
+             style="{% if subject == '英语' %}background-color: #EA3259;{% endif %}">
+             英语</a>
+        </li>
+        <li>
+          <a href="{{ url_for('show_subject', subject='政治') }}"
+             class="{% if subject == '政治' %}active-subject{% endif %}"
+             style="{% if subject == '政治' %}background-color: #25A75A;{% endif %}">
+             政治</a>
+        </li>
+        <li>
+          <a href="{{ url_for('show_subject', subject='408') }}"
+             class="{% if subject == '408' %}active-subject{% endif %}"
+             style="{% if subject == '408' %}background-color: #FCD618;{% endif %}">
+             408</a>
+        </li>
+      </ul>
+    </div>
+    <!-- 右侧内容区 -->
+    <div class="content">
+      <h1>
+        每日任务 -
+        <span style="color: {{ color }};">{{ subject }}</span>
+      </h1>
+
+      <!-- 任务区域容器 -->
+      <div class="tasks-container">
+        <!-- 添加任务表单 -->
+        <form class="add-task-form" action="{{ url_for('add_task', subject=subject) }}" method="POST">
+          <input type="text" name="task_name" class="task-name" placeholder="请输入任务名称" required>
+          <input type="number" name="estimated_time" class="estimated-time" placeholder="预计用时 (min)" min="0" step="1" required>
+          <button type="submit" id="addTaskBtn">添加任务</button>
+        </form>
+        <!-- 任务列表 -->
+        <div class="task-section">
+          <h2>任务列表</h2>
+          <ul class="task-list">
+            {% for t in task_list %}
+            <li class="task-item">
+              <!-- 完成状态按钮 -->
+              <form action="{{ url_for('toggle_task', subject=subject, task_index=loop.index0) }}"
+                    method="POST" style="display: flex; align-items: center; margin-right: 10px;">
+                <button type="submit" style="background: none; border: none; cursor: pointer;">
+                  <span class="circle {% if t.completed %}filled-circle{% else %}empty-circle{% endif %}"></span>
+                </button>
+              </form>
+              <!-- 任务名称和预计用时 -->
+              <span class="task-name {% if t.completed %}completed{% endif %}">
+                {{ t.name }}
+              </span>
+              <span class="estimated-time-display">{{ t.estimated_time }}min&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
+              <!-- 删除按钮 -->
+              <form action="{{ url_for('delete_task', subject=subject, task_index=loop.index0) }}"
+                    method="POST">
+                <button class="delete-button" type="submit" title="删除任务">❎</button>
+              </form>
+            </li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+
+      <!-- 408 科目：嵌入网页容器 -->
+      {% if subject == '408' %}
+      <div class="iframe-container" id="iframeContainer">
+        <button class="fullscreen-button" id="fullscreenButton" onclick="toggleFullscreen()">🗖</button>
+        <button class="fullscreen-button" id="newWindowButton" onclick="openInNewWindow()">🔗</button>
+        <button class="fullscreen-button" id="dropdownButton" onclick="toggleDropdown()">﹀</button>
+        <div class="dropdown-menu" id="dropdownMenu">
+          <div class="dropdown-item" data-url="https://acnv01bunkvj.feishu.cn/wiki/UdvLwq7ebipxowkJVIgcD9SZnwh?table=tbl3voS4COtnkk3k&view=vew24jRy6r">数据结构</div>
+          <div class="dropdown-item" data-url="https://acnv01bunkvj.feishu.cn/wiki/UdvLwq7ebipxowkJVIgcD9SZnwh?table=tbl3dRN7eNKhvtVB&view=vew40dSd1i">计组</div>
+
+        </div>
+        <iframe frameborder="0" scrolling="no"
+                src="https://acnv01bunkvj.feishu.cn/wiki/UdvLwq7ebipxowkJVIgcD9SZnwh?table=tbl3voS4COtnkk3k&view=vew24jRy6r">
+        </iframe>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <script>
+    // 在页面加载时读取存储的URL
+    document.addEventListener('DOMContentLoaded', function() {
+      // 只在408科目生效
+      {% if subject == '408' %}
+        const storedUrl = localStorage.getItem('lastSelectedUrl_408');
+        const defaultUrl = "https://acnv01bunkvj.feishu.cn/wiki/UdvLwq7ebipxowkJVIgcD9SZnwh?table=tbl3voS4COtnkk3k&view=vew24jRy6r";
+
+        if (storedUrl) {
+          document.querySelector("#iframeContainer iframe").src = storedUrl;
+          window.lastSelectedUrl = storedUrl;
+        } else {
+          localStorage.setItem('lastSelectedUrl_408', defaultUrl);
+        }
+      {% endif %}
+
+    });
+
+    // 修改下拉项点击事件
+    document.querySelectorAll('.dropdown-item').forEach(item => {
+      item.addEventListener('click', function(e) {
+        e.stopPropagation(); // 阻止事件冒泡
+        const iframe = document.querySelector("#iframeContainer iframe");
+        const url = this.dataset.url;
+
+        iframe.src = url;
+        window.lastSelectedUrl = url;
+        localStorage.setItem('lastSelectedUrl_408', url);
+
+        // 仅通过class控制关闭
+        document.getElementById('dropdownMenu').classList.remove('show');
+      });
+    });
+    // 切换下拉菜单
+    function toggleDropdown() {
+      const menu = document.getElementById('dropdownMenu');
+      menu.classList.toggle('show');
+    }
+
+    // 新增：处理下拉菜单选择
+    document.querySelectorAll('.dropdown-item').forEach(item => {
+      item.addEventListener('click', function() {
+        const iframe = document.querySelector("#iframeContainer iframe");
+        iframe.src = this.dataset.url;
+
+
+        // 更新新窗口打开的URL
+        window.lastSelectedUrl = this.dataset.url;
+      });
+    });
+
+    // 点击外部关闭下拉
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('#dropdownButton') && !e.target.closest('.dropdown-menu')) {
+        const menu = document.getElementById('dropdownMenu');
+        menu.classList.remove('show');
+      }
+    });
+
+    // 新增：处理过渡结束事件
+    document.getElementById('dropdownMenu').addEventListener('transitionend', (e) => {
+
+    });
+
+    // 保持按钮悬停效果一致性
+    const iframeBtns = document.querySelectorAll('.fullscreen-button, #dropdownButton');
+    iframeBtns.forEach(btn => {
+      btn.addEventListener('mouseenter', () => {
+        document.querySelectorAll('.fullscreen-button').forEach(b => b.style.opacity = '1');
+      });
+      btn.addEventListener('mouseleave', () => {
+        document.querySelectorAll('.fullscreen-button').forEach(b => b.style.opacity = '0');
+      });
+    });
+    // 切换全屏状态
+    function toggleFullscreen() {
+      const container = document.getElementById('iframeContainer');
+      const btn = document.getElementById('fullscreenButton');
+      container.classList.toggle('fullscreen');
+      btn.textContent = container.classList.contains('fullscreen') ? '🗗' : '🗖';
+    }
+    function openInNewWindow() {
+      const defaultUrl = "https://acnv01bunkvj.feishu.cn/wiki/UdvLwq7ebipxowkJVIgcD9SZnwh?table=tbl3voS4COtnkk3k&view=vew24jRy6r";
+      const url = window.lastSelectedUrl || localStorage.getItem('lastSelectedUrl_408') || defaultUrl;
+      window.open(url, "_blank");
+    }
+    // 实时反光效果
+    const addTaskBtn = document.getElementById('addTaskBtn');
+    addTaskBtn.addEventListener('mousemove', function(e) {
+      const rect = this.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      this.style.background = `radial-gradient(circle at ${x}px ${y}px, rgba(255,255,255,0.6), rgba(220,220,220,0.6))`;
+    });
+    addTaskBtn.addEventListener('mouseleave', function() {
+      this.style.background = 'rgba(220,220,220,0.6)';
+    });
+  </script>
+</body>
+</html>

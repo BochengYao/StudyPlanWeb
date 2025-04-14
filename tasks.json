@@ -1,0 +1,34 @@
+{
+    "数学": [
+        {
+            "name": "月考",
+            "completed": false,
+            "estimated_time": "120"
+        }
+    ],
+    "英语": [
+        {
+            "name": "复习一句翻译真题",
+            "completed": false,
+            "estimated_time": "10"
+        },
+        {
+            "name": "总结完型关系副词",
+            "completed": false,
+            "estimated_time": "30"
+        },
+        {
+            "name": "复习写作课内容",
+            "completed": false,
+            "estimated_time": "1"
+        }
+    ],
+    "政治": [
+        {
+            "name": "复习一年多选题",
+            "completed": false,
+            "estimated_time": "30"
+        }
+    ],
+    "408": []
+}
