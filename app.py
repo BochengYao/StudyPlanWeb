@@ -6,6 +6,11 @@ app = Flask(__name__)
 
 DATA_FILE = 'tasks.json'
 
+@app.route('/')
+def index():
+    print("执行了index路由")
+    return redirect(url_for('show_subject', subject='数学'))
+
 # 初始化或加载任务数据
 def load_tasks():
     if not os.path.exists(DATA_FILE):
@@ -77,4 +82,4 @@ def delete_task(subject, task_index):
     return redirect(url_for('show_subject', subject=subject))
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, host='0.0.0.0', port=5000)
